@@ -1,0 +1,3 @@
+Solução para grafos/grafo9.txt:
+Rotas: {1: ['Source', 1, 'Sink'], 2: ['Source', 3, 'Sink'], 3: ['Source', 5, 8, 'Sink'], 4: ['Source', 6, 'Sink'], 5: ['Source', 2, 4, 7, 'Sink']}
+Custo total: 633

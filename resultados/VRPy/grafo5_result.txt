@@ -1,0 +1,3 @@
+Solução para grafos/grafo5.txt:
+Rotas: {1: ['Source', 4, 'Sink'], 2: ['Source', 3, 'Sink'], 3: ['Source', 2, 'Sink'], 4: ['Source', 1, 'Sink']}
+Custo total: 266
