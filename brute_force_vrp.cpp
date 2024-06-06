@@ -4,139 +4,144 @@
 #include <set>
 #include <map>
 #include <queue>
-#include <utility> // Para std::pair
+#include <utility>  // Para std::pair
 #include <algorithm>  // Para std::next_permutation
-#include <cmath>      // Para pow
+#include <cmath>  // Para pow
 #include <climits>
 #include <chrono>  // Inclui a biblioteca chrono
 
 using namespace std::chrono;  // Usa o namespace chrono para facilitar
 
 // Define o tipo Edge como uma tupla de três inteiros (origem, destino, custo)
-using Edge = std::tuple<int, int, int>;
+using Aresta = std::tuple<int, int, int>;
 
 // Define um grafo como um mapa de inteiros para conjuntos de inteiros
-using Graph = std::map<int, std::set<int>>;
+using Grafo = std::map<int, std::set<int>>;
 
 // Define um caminho como um vetor de inteiros
-using Path = std::vector<int>;
+using Caminho = std::vector<int>;
 
 // Define uma demanda como um mapa de inteiros para inteiros
-using Demand = std::map<int, int>;
+using Demanda = std::map<int, int>;
 
 // Define arestas como um mapa de pares de inteiros para inteiros
-using Edges = std::map<std::pair<int, int>, int>;
+using Arestas = std::map<std::pair<int, int>, int>;
 
-Graph to_matrix_adj(const std::vector<Edge>& edges) {
-    Graph graph;
-    for (const auto& edge : edges) {
-        int origem = std::get<0>(edge);
-        int destino = std::get<1>(edge);
-        if (origem == 0) origem = -1;   // -1 para 'source'
-        if (destino == 0) destino = -2; // -2 para 'sink'
-        graph[origem].insert(destino);
+// Função para converter lista de arestas em matriz de adjacência
+Grafo gerarMatrizAdjacente(const std::vector<Aresta>& listaArestas) {
+    Grafo grafo;
+    for (const auto& aresta : listaArestas) {
+        int origem = std::get<0>(aresta);
+        int destino = std::get<1>(aresta);
+        if (origem == 0) origem = -1;  // -1 para 'source'
+        if (destino == 0) destino = -2;  // -2 para 'sink'
+        grafo[origem].insert(destino);
     }
-    return graph;
+    return grafo;
 }
 
-std::vector<Path> find_all_paths(const Graph& graph) {
-    std::vector<Path> paths;
-    std::queue<Path> queue;
-    Path start = {-1}; // Começa com 'source' representado por -1
-    queue.push(start);
+// Função para encontrar todos os caminhos possíveis no grafo
+std::vector<Caminho> encontrarTodosCaminhos(const Grafo& grafo) {
+    std::vector<Caminho> caminhos;
+    std::queue<Caminho> fila;
+    Caminho inicio = {-1};  // Começa com 'source' representado por -1
+    fila.push(inicio);
 
-    while (!queue.empty()) {
-        Path path = queue.front();
-        queue.pop();
-        int node = path.back();
+    while (!fila.empty()) {
+        Caminho caminho = fila.front();
+        fila.pop();
+        int no = caminho.back();
 
-        if (node == -2) { // -2 para 'sink'
-            paths.push_back(path);
+        if (no == -2) {  // -2 para 'sink'
+            caminhos.push_back(caminho);
         } else {
-            for (int neighbor : graph.at(node)) {
-                Path new_path(path);
-                new_path.push_back(neighbor);
-                queue.push(new_path);
+            for (int vizinho : grafo.at(no)) {
+                Caminho novoCaminho(caminho);
+                novoCaminho.push_back(vizinho);
+                fila.push(novoCaminho);
             }
         }
     }
-    return paths;
+    return caminhos;
 }
 
-bool check_capacity(const Path& path, const Demand& demanda, int capacidade) {
-    int carga_total = 0;
-    for (int node : path) {
-        if (node != -1 && node != -2) { // Ignora 'source' e 'sink'
-            carga_total += demanda.at(node);
+// Função para verificar se a capacidade do caminho é respeitada
+bool verificarCapacidade(const Caminho& caminho, const Demanda& demandas, int capacidadeMax) {
+    int cargaTotal = 0;
+    for (int no : caminho) {
+        if (no != -1 && no != -2) {  // Ignora 'source' e 'sink'
+            cargaTotal += demandas.at(no);
         }
     }
-    return carga_total <= capacidade;
+    return cargaTotal <= capacidadeMax;
 }
 
-int calculate_cost(const Path& path, const Edges& arestas) {
-    int custo_total = 0;
-    
-    for (size_t i = 0; i < path.size() - 1; ++i) {
-        int origem = path[i];
-        if (origem == -1){
+// Função para calcular o custo de um caminho
+int calcularCusto(const Caminho& caminho, const Arestas& mapaArestas) {
+    int custoTotal = 0;
+
+    for (size_t i = 0; i < caminho.size() - 1; ++i) {
+        int origem = caminho[i];
+        if (origem == -1) {
             origem = 0;
         }
-        
-        int destino = path[i + 1];
-        if (destino == -2){
+
+        int destino = caminho[i + 1];
+        if (destino == -2) {
             destino = 0;
         }
-        
-        custo_total += arestas.at({origem, destino});
+
+        custoTotal += mapaArestas.at({origem, destino});
     }
-    return custo_total;
+    return custoTotal;
 }
 
-std::vector<std::vector<Path>> generate_power_set(const std::vector<Path>& all_paths) {
-    std::vector<std::vector<Path>> power_set;
-    size_t set_size = all_paths.size();
-    size_t power_set_size = std::pow(2, set_size);
+// Função para gerar o conjunto das partes (power set) de todos os caminhos
+std::vector<std::vector<Caminho>> gerarPowerSet(const std::vector<Caminho>& todosCaminhos) {
+    std::vector<std::vector<Caminho>> powerSet;
+    size_t tamanhoSet = todosCaminhos.size();
+    size_t tamanhoPowerSet = std::pow(2, tamanhoSet);
 
-    for (size_t counter = 0; counter < power_set_size; counter++) {
-        std::vector<Path> subset;
-        for (size_t i = 0; i < set_size; i++) {
-            if (counter & (1 << i)) {
-                subset.push_back(all_paths[i]);
+    for (size_t contador = 0; contador < tamanhoPowerSet; contador++) {
+        std::vector<Caminho> subconjunto;
+        for (size_t i = 0; i < tamanhoSet; i++) {
+            if (contador & (1 << i)) {
+                subconjunto.push_back(todosCaminhos[i]);
             }
         }
-        if (!subset.empty()) {
-            power_set.push_back(subset);
+        if (!subconjunto.empty()) {
+            powerSet.push_back(subconjunto);
         }
     }
-    return power_set;
+    return powerSet;
 }
 
-bool check_combination_demand(const std::vector<Path>& combination, const Demand& demanda, int max_stops) {
-    std::vector<int> demand_nodes;
-    Demand demand_copy = demanda;
-    for (const auto& [node, demand] : demanda) {
-        if (demand > 0) {
-            demand_nodes.push_back(node);
+// Função para verificar se a combinação de caminhos atende à demanda e respeita o número máximo de paradas
+bool verificarCombinacaoDemanda(const std::vector<Caminho>& combinacao, const Demanda& demandas, int maxParadas) {
+    std::vector<int> nosComDemanda;
+    Demanda copiaDemandas = demandas;
+    for (const auto& [no, demanda] : demandas) {
+        if (demanda > 0) {
+            nosComDemanda.push_back(no);
         }
     }
 
-    for (const auto& path : combination) {
-        if (path.size() - 2 > max_stops) {
+    for (const auto& caminho : combinacao) {
+        if (caminho.size() - 2 > maxParadas) {
             return false;
         }
-        for (int node : path) {
-            
-            if (node != -1 && node != -2) { // Ignora 'source' e 'sink'
-                auto it = std::find(demand_nodes.begin(), demand_nodes.end(), node);
-                if (it != demand_nodes.end()) {
-                    demand_copy[node] = -3;
+        for (int no : caminho) {
+            if (no != -1 && no != -2) {  // Ignora 'source' e 'sink'
+                auto it = std::find(nosComDemanda.begin(), nosComDemanda.end(), no);
+                if (it != nosComDemanda.end()) {
+                    copiaDemandas[no] = -3;
                 }
             }
         }
     }
 
-    for (const auto& [node, demand] : demand_copy) {
-        if (demand != -3) {
+    for (const auto& [no, demanda] : copiaDemandas) {
+        if (demanda != -3) {
             return false;
         }
     }
@@ -144,109 +149,108 @@ bool check_combination_demand(const std::vector<Path>& combination, const Demand
     return true;
 }
 
-int total_cost_of_combination(const std::vector<Path>& combination, const Edges& edges) {
-    int total_cost = 0;
-    for (const auto& path : combination) {
-        total_cost += calculate_cost(path, edges);
-        // std::cout << "Entrei no for do total cost e alem" << std::endl;
+// Função para calcular o custo total de uma combinação de caminhos
+int calcularCustoTotalCombinacao(const std::vector<Caminho>& combinacao, const Arestas& mapaArestas) {
+    int custoTotal = 0;
+    for (const auto& caminho : combinacao) {
+        custoTotal += calcularCusto(caminho, mapaArestas);
     }
-    return total_cost;
+    return custoTotal;
 }
 
-std::vector<Path> find_best_route(const std::vector<std::vector<Path>>& power_set, const Edges& edges, const Demand& demanda, int max_stops) {
-    int min_cost = 99999999;
-    std::vector<Path> best_route;
-    for (const auto& combination : power_set) {
-        if (check_combination_demand(combination, demanda, max_stops)) {
-            // std::cout << "Entrei no IF " << std::endl;
-            int cost = total_cost_of_combination(combination, edges);
-            // std::cout << "Custo: " << cost << std::endl;
-            if (cost < min_cost) {
-                min_cost = cost;
-                best_route = combination;
+// Função para encontrar a melhor rota que atende à demanda com o menor custo
+std::vector<Caminho> encontrarMelhorRota(const std::vector<std::vector<Caminho>>& powerSet, const Arestas& mapaArestas, const Demanda& demandas, int maxParadas) {
+    int custoMinimo = INT_MAX;
+    std::vector<Caminho> melhorRota;
+    for (const auto& combinacao : powerSet) {
+        if (verificarCombinacaoDemanda(combinacao, demandas, maxParadas)) {
+            int custo = calcularCustoTotalCombinacao(combinacao, mapaArestas);
+            if (custo < custoMinimo) {
+                custoMinimo = custo;
+                melhorRota = combinacao;
             }
         }
     }
-    return best_route;
+    return melhorRota;
 }
 
 int main(int argc, char* argv[]) {
 
-    int max_stops = 10;  // Número máximo de paradas permitidas
+    int maxParadas = 10;  // Número máximo de paradas permitidas
 
-    if (argc < 2) {  // Verifica se o caminho do arquivo foi fornecido
+    // Verifica se o caminho do arquivo foi fornecido
+    if (argc < 2) {
         std::cerr << "Uso: " << argv[0] << " <caminho_para_o_arquivo>" << std::endl;
         return 1;
     }
 
-    const char* file_path = argv[1];  // Pega o caminho do arquivo do primeiro argumento
-    std::ifstream file(file_path);  // Abre o arquivo
+    const char* caminhoArquivo = argv[1];  // Pega o caminho do arquivo do primeiro argumento
+    std::ifstream arquivo(caminhoArquivo);  // Abre o arquivo
 
-
-    //std::ifstream file("./data/grafo_10.txt");  // Ajuste o caminho conforme necessário
-    if (!file) {
+    // Verifica se o arquivo foi aberto com sucesso
+    if (!arquivo) {
         std::cerr << "Não foi possível abrir o arquivo." << std::endl;
         return 1;
     }
 
-    std::cout << "Arquivo aberto com sucesso.\n" << "File path: " << file_path << "\n";
-    std::cout << "Brute Force" << "\n";
+    std::cout << "Arquivo aberto com sucesso.\n" << "Caminho do arquivo: " << caminhoArquivo << "\n";
+    std::cout << "Força Bruta" << "\n";
     
-    auto start = high_resolution_clock::now();
-    int num_nos, num_arestas;
-    file >> num_nos;  // Lê o número de nós
+    auto inicio = high_resolution_clock::now();
+    int numeroNos, numeroArestas;
+    arquivo >> numeroNos;  // Lê o número de nós
 
-    Demand demanda;
-    int node_index, node_demand;
+    Demanda demandas;
+    int indiceNo, demandaNo;
 
     // Ler as demandas dos nós
-    for (int i = 0; i < num_nos - 1; ++i) {
-        file >> node_index >> node_demand;
-        demanda[node_index] = node_demand;
+    for (int i = 0; i < numeroNos - 1; ++i) {
+        arquivo >> indiceNo >> demandaNo;
+        demandas[indiceNo] = demandaNo;
     }
 
-    file >> num_arestas;  // Lê o número de arestas
-    std::vector<Edge> edges;
+    arquivo >> numeroArestas;  // Lê o número de arestas
+    std::vector<Aresta> listaArestas;
     int origem, destino, custo;
 
     // Ler as arestas
-    for (int i = 0; i < num_arestas; ++i) {
-        file >> origem >> destino >> custo;
-        edges.push_back(std::make_tuple(origem, destino, custo));
+    for (int i = 0; i < numeroArestas; ++i) {
+        arquivo >> origem >> destino >> custo;
+        listaArestas.push_back(std::make_tuple(origem, destino, custo));
     }
 
-    file.close();
+    arquivo.close();
 
     // Criar o mapa de arestas
-    Edges edge_map;
-    for (const auto& e : edges) {
-        edge_map[{std::get<0>(e), std::get<1>(e)}] = std::get<2>(e);
+    Arestas mapaArestas;
+    for (const auto& e : listaArestas) {
+        mapaArestas[{std::get<0>(e), std::get<1>(e)}] = std::get<2>(e);
     }
 
     // Continuar com a lógica anterior para gerar o grafo, encontrar caminhos, etc.
-    Graph graph = to_matrix_adj(edges);
-    std::vector<Path> all_paths = find_all_paths(graph);
+    Grafo grafo = gerarMatrizAdjacente(listaArestas);
+    std::vector<Caminho> todosCaminhos = encontrarTodosCaminhos(grafo);
 
     // Gerar o conjunto das partes de todos os caminhos
-    std::vector<std::vector<Path>> power_set_paths = generate_power_set(all_paths);
+    std::vector<std::vector<Caminho>> powerSetCaminhos = gerarPowerSet(todosCaminhos);
     
     // Encontrar a melhor rota que atende à demanda com o menor custo
-    std::vector<Path> best_route = find_best_route(power_set_paths, edge_map, demanda, max_stops);
+    std::vector<Caminho> melhorRota = encontrarMelhorRota(powerSetCaminhos, mapaArestas, demandas, maxParadas);
 
     // Finaliza o timer e calcula a duração
-    auto stop = high_resolution_clock::now();
-    auto duration = duration_cast<milliseconds>(stop - start);
+    auto fim = high_resolution_clock::now();
+    auto duracao = duration_cast<milliseconds>(fim - inicio);
 
     // Exibir a melhor rota encontrada
     std::cout << "Melhor rota encontrada:\n";
-    for (const auto& path : best_route) {
-        for (int node : path) {
-            std::cout << node << " -> ";
+    for (const auto& caminho : melhorRota) {
+        for (int no : caminho) {
+            std::cout << no << " -> ";
         }
         std::cout << "Fim\n";
     }
 
-    std::cout << "Tempo total de execução: " << duration.count() << " ms" << std::endl;
+    std::cout << "Tempo total de execução: " << duracao.count() << " ms" << std::endl;
 
     return 0;
 }
