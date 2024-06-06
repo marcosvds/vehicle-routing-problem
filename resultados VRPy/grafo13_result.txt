@@ -1,3 +1,0 @@
-Solução para grafos/grafo13.txt:
-Rotas: {1: ['Source', 12, 'Sink'], 2: ['Source', 2, 9, 'Sink'], 3: ['Source', 4, 5, 'Sink'], 4: ['Source', 10, 'Sink'], 5: ['Source', 1, 'Sink'], 6: ['Source', 3, 7, 11, 'Sink'], 7: ['Source', 8, 'Sink'], 8: ['Source', 6, 'Sink']}
-Custo total: 833
