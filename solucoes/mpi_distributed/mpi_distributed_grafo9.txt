@@ -1,1 +1,1 @@
-Tempo total de execução: 40319 ms
+40319
